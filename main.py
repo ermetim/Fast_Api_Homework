@@ -120,6 +120,8 @@ def dog(name: str,
             return dog
     raise HTTPException(status_code=409, detail='The specified PK is not exists.')
 
+# uvicorn main:app --host 0.0.0.0 --port 8000 # For render.com
+
 
 
 
