@@ -58,7 +58,7 @@ def get_post() -> Timestamp:
     return new_row
 
 
-@app.get("/dog", summary="Get Dogs by KIND")
+@app.get("/dog", summary="Get Dogs")
 def get_dogs_kind(kind: str):
     keys = []
     for key, val in dogs_db.items():
