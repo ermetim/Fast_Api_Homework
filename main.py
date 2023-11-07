@@ -50,7 +50,7 @@ def root():
 
 
 @app.post("/post")
-def post() -> Timestamp:
+def get_post() -> Timestamp:
     new_time = time.time()
     new_time_id = len(post_db)
     new_row = Timestamp(id = new_time_id, timestamp= int(round(new_time)))
@@ -58,67 +58,43 @@ def post() -> Timestamp:
     return new_row
 
 
-@app.get("/dog")
-def dog(kind: str):
+@app.get("/dog", summary="Get Dogs by KIND")
+def get_dogs_kind(kind: str):
     keys = []
     for key, val in dogs_db.items():
-        if val.kind == kind:
+        if val.kind == kind.lower():
             keys.append(key)
-        lst = list(map(dogs_db.get, keys))
+    lst = list(map(dogs_db.get, keys))
     if len(lst) == 0:
-        raise HTTPException(status_code=409, detail='The specified KIND of dog is not exists.')
+        raise HTTPException(status_code=409, detail='The specified KIND of dog does not exist.')
     return lst
 
 
-@app.post("/dog") # Добавление
-def dog(name: str,
-        pk: int,
-        kind: str):
-    dog = Dog(name = name, pk = pk, kind = DogType(kind))
-    for key, val in dogs_db.items():
-        if val.pk == pk:
-           raise HTTPException(status_code=409, detail='The specified PK already exists.')
+@app.post("/dog", response_model=Dog, summary="Create Dog") # Добавление собаки в базу
+def create_dog(name: str, pk: int, kind: str):
+    dog = Dog(name=name, pk=pk, kind=DogType(kind))
+    existing_pk = dog.pk in [value.pk for value in dogs_db.values()]
+    if existing_pk:
+        raise HTTPException(status_code=409, detail='The specified PK already exists.')
     dogs_db[pk] = dog
     return dog
 
-@app.post("/dog") # Добавление
-def create_dog(name: str,
-               pk: int,
-               kind: str):
-    dog = Dog(name = name, pk = pk, kind = DogType(kind))
-    for key, val in dogs_db.items():
-        if val.pk == pk:
-           raise HTTPException(status_code=409, detail='The specified PK already exists.')
-    dogs_db[pk] = dog
-    return dog
 
-# @app.post('/dog', response_model=Dog, summary='Create Dog')
-# def create_dog(dog: Dog):
-#     existing_pk = ...
-#     if existing_pk:
-#         raise HTTPException(status_code=409,
-#                             detail='The specified PK already exists.')
-#
-#     ...
-#
-#     return Dog(...)
-@app.get("/dog/{pk}")
-def dog(pk: int) -> Dog:
+@app.get("/dog/{pk}", response_model=Dog, summary="Get Dog by PK")
+def get_dog_pk(pk: int):
     for key, val in dogs_db.items():
         if val.pk == pk:
             return dogs_db[key]
-    raise HTTPException(status_code=409, detail='The specified PK is not exists.')
+    raise HTTPException(status_code=409, detail='The specified PK does not exist.')
 
-@app.patch("/dog/{pk}")
-def dog(name: str,
-        pk: int,
-        kind: str) -> Dog:
+@app.patch("/dog/{pk}", response_model=Dog, summary='Update Dog')
+def update_dog(name: str, pk: int, kind: str):
     dog = Dog(name = name, pk = pk, kind = DogType(kind))
     for key, val in dogs_db.items():
         if val.pk == pk:
             dogs_db[key] = dog
             return dog
-    raise HTTPException(status_code=409, detail='The specified PK is not exists.')
+    raise HTTPException(status_code=409, detail='The specified PK does not exist.')
 
 # uvicorn main:app --host 0.0.0.0 --port 8000 # For render.com
 
