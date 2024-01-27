@@ -1,14 +1,23 @@
 from enum import Enum
+
+import uvicorn
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from typing import List
 import time
 
 app = FastAPI()
 
-"""uvicorn main:app --reload
+"""
+Запуск локально
+uvicorn main:app --reload
 (запуск веб-сервера с указанием начального скрипта main.py и объекта
 FastAPI который создали инструкцией app = FastAPI())
 Обращение http://127.0.0.1:8000
+
+Запуск на рендере
+# uvicorn main:app --host 0.0.0.0 --port 8000 # For render.com
+
 """
 
 class DogType(str, Enum):
@@ -59,7 +68,9 @@ def get_post() -> Timestamp:
 
 
 @app.get("/dog", summary="Get Dogs")
-def get_dogs_kind(kind: str):
+def get_dogs(kind: DogType = None) -> List[Dog]:
+    if kind is None:
+        return list(dogs_db.values())
     keys = []
     for key, val in dogs_db.items():
         if val.kind == kind.lower():
@@ -71,42 +82,24 @@ def get_dogs_kind(kind: str):
 
 
 @app.post("/dog", response_model=Dog, summary="Create Dog") # Добавление собаки в базу
-def create_dog(name: str, pk: int, kind: str):
-    dog = Dog(name=name, pk=pk, kind=DogType(kind))
-    existing_pk = dog.pk in [value.pk for value in dogs_db.values()]
-    if existing_pk:
+def create_dog(dog: Dog) -> Dog:
+    if dog.pk in dogs_db:
         raise HTTPException(status_code=409, detail='The specified PK already exists.')
-    dogs_db[pk] = dog
+    dogs_db[dog.pk] = dog
     return dog
 
 
 @app.get("/dog/{pk}", response_model=Dog, summary="Get Dog by PK")
-def get_dog_pk(pk: int):
-    for key, val in dogs_db.items():
-        if val.pk == pk:
-            return dogs_db[key]
-    raise HTTPException(status_code=409, detail='The specified PK does not exist.')
+def get_dog_pk(pk: int) -> Dog:
+    if pk not in dogs_db:
+        raise HTTPException(status_code=409, detail='The specified PK does not exist.')
+    return dogs_db[pk]
 
 @app.patch("/dog/{pk}", response_model=Dog, summary='Update Dog')
-def update_dog(name: str, pk: int, kind: str):
-    dog = Dog(name = name, pk = pk, kind = DogType(kind))
-    for key, val in dogs_db.items():
-        if val.pk == pk:
-            dogs_db[key] = dog
-            return dog
-    raise HTTPException(status_code=409, detail='The specified PK does not exist.')
-
-# uvicorn main:app --host 0.0.0.0 --port 8000 # For render.com
-
-
-
-
-
-
-
-
-
-
-
-
-
+def update_dog(pk: int, dog: Dog) -> Dog:
+    if pk not in dogs_db:
+        raise HTTPException(status_code=409, detail='The specified PK does not exist.')
+    if pk != dog.pk:
+        raise HTTPException(status_code=409, detail='The specified PK does not match.')
+    dogs_db[pk] = dog
+    return dog
